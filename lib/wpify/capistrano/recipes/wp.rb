@@ -76,9 +76,12 @@ Capistrano::Configuration.instance(:must_exist).load do
   # actually exist. This variable lets tasks like symlink work either in the
   # standalone case, or during deployment.
   _cset(:latest_release) { exists?(:deploy_timestamped) ? release_path : current_release }
-  
+
   # Set default run options
   default_run_options[:pty] = true
+
+  # The directories from the release that are linked into wp-content
+  _cset :link_dirs,     %w(themes plugins)
 
   # =========================================================================
   # These are helper methods that will be available to your recipes.
@@ -132,7 +135,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   # THUS, if you want to try to run something via sudo, and what to use the
   # root user, you'd just to try_sudo('something'). If you wanted to try_sudo as
   # someone else, you'd just do try_sudo('something', :as => "bob"). If you
-  # always wanted sudo to run as a particular user, you could do 
+  # always wanted sudo to run as a particular user, you could do
   # set(:admin_runner, "bob").
   def try_sudo(*args)
     options = args.last.is_a?(Hash) ? args.pop : {}
@@ -245,29 +248,9 @@ Capistrano::Configuration.instance(:must_exist).load do
       using the :public_children variable.
     DESC
     task :finalize_update, :except => { :no_release => true } do
-      # run "chmod -R g+w #{latest_release}" if fetch(:group_writable, true)
-      # 
-      # # mkdir -p is making sure that the directories are there for some SCM's that don't
-      # # save empty folders
-      # run <<-CMD
-      #   rm -rf #{latest_release}/log #{latest_release}/public/system #{latest_release}/tmp/pids &&
-      #   mkdir -p #{latest_release}/public &&
-      #   mkdir -p #{latest_release}/tmp &&
-      #   ln -s #{shared_path}/log #{latest_release}/log &&
-      #   ln -s #{shared_path}/system #{latest_release}/public/system &&
-      #   ln -s #{shared_path}/pids #{latest_release}/tmp/pids
-      # CMD
-      # 
-      # if fetch(:normalize_asset_timestamps, true)
-      #   stamp = Time.now.utc.strftime("%Y%m%d%H%M.%S")
-      #   asset_paths = fetch(:public_children, %w(images stylesheets javascripts)).map { |p| "#{latest_release}/public/#{p}" }.join(" ")
-      #   run "find #{asset_paths} -exec touch -t #{stamp} {} ';'; true", :env => { "TZ" => "UTC" }
-      # end
-
       # Link up the themes and plugins we deployed
-      link_dirs = %w(themes plugins)
       link_dirs.each do |d|
-        run <<-EOB 
+        run <<-EOB
           if [ -d #{release_path}/wordpress/wp-content/#{d}/ ]; then
             for i in `find #{release_path}/wordpress/wp-content/#{d}/ -maxdepth 1 -mindepth 1 -type d`;
               do ln -nfs $i #{deploy_to}/wordpress/wp-content/#{d}/;
