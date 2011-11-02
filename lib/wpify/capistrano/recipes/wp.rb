@@ -248,16 +248,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       using the :public_children variable.
     DESC
     task :finalize_update, :except => { :no_release => true } do
-      # Link up the themes and plugins we deployed
-      link_dirs.each do |d|
-        run <<-EOB
-          if [ -d #{release_path}/wordpress/wp-content/#{d}/ ]; then
-            for i in `find #{release_path}/wordpress/wp-content/#{d}/ -maxdepth 1 -mindepth 1 -type d`;
-              do ln -nfs $i #{deploy_to}/wordpress/wp-content/#{d}/;
-            done;
-          fi;
-        EOB
-      end
+      # Empty task for now
     end
 
     desc <<-DESC
@@ -279,6 +270,21 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
 
       run "rm -f #{current_path} && ln -s #{latest_release} #{current_path}"
+      # Link the wordpress stuff to current path
+      wp_links
+    end
+
+    desc "Link the wordpress assets into the wordpress serve folder"
+    task :wp_links do
+      link_dirs.each do |d|
+        run <<-EOB
+          if [ -d #{current_path}/wordpress/wp-content/#{d}/ ]; then
+            for i in `find #{current_path}/wordpress/wp-content/#{d}/ -maxdepth 1 -mindepth 1 -type d`;
+              do ln -nfs $i #{deploy_to}/wordpress/wp-content/#{d}/;
+            done;
+          fi;
+        EOB
+      end
     end
 
     desc <<-DESC
