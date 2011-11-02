@@ -82,6 +82,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
   # The directories from the release that are linked into wp-content
   _cset :link_dirs,     %w(themes plugins)
+  _cset :group_writable, true
 
   # =========================================================================
   # These are helper methods that will be available to your recipes.
@@ -195,7 +196,9 @@ Capistrano::Configuration.instance(:must_exist).load do
       dirs += shared_children.map { |d| File.join(shared_path, d) }
       run "#{try_sudo} mkdir -p #{dirs.join(' ')}"
       run "#{try_sudo} chmod g+w #{dirs.join(' ')}" if fetch(:group_writable, true)
+      # Install wordpress latest
       run "cd #{deploy_to}; curl -s -O http://wordpress.org/latest.tar.gz; tar zxf latest.tar.gz; rm latest.tar.gz"
+      run "chmod -R g+w #{deploy_to}/wordpress" if fetch(:group_writable, true)
     end
 
     desc <<-DESC
@@ -248,7 +251,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       using the :public_children variable.
     DESC
     task :finalize_update, :except => { :no_release => true } do
-      # Empty task for now
+      run "chmod -R g+w #{latest_release}" if fetch(:group_writable, true)
     end
 
     desc <<-DESC
