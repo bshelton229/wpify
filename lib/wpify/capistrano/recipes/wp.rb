@@ -542,9 +542,29 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     desc "Rsync remote plugins that aren't tracked in revision control"
     task :sync_untracked_plugins do
-      server = find_servers(:roles => :app, :except => { :no_release => true }).first.host
-      logger.info "Syncing non-linked plugins from #{server}"
-      run_locally("rsync -avz --no-links #{user}@#{server}:#{deploy_to}/wordpress/wp-content/plugins/ #{Dir.getwd}/wordpress/wp-content/plugins/")
+      server = find_servers(:roles => :app, :except => { :no_release => true }).first
+      logger.info "Syncing non-linked plugins from #{server.host}"
+      run_locally("rsync -avz --no-links #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/plugins/ #{Dir.getwd}/wordpress/wp-content/plugins/")
+    end
+
+    desc "Pull uploads from the first remote app server"
+    task :sync_uploads do
+      server = find_servers(:roles => :app, :except => { :no_release => true }).first
+      logger.info "Syncing uploads from #{server.host}"
+      run_locally("rsync -avz #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/uploads/ #{Dir.getwd}/wordpress/wp-content/uploads/")
+    end
+
+    desc <<-DESC
+      Install wordpress locally based on the remote version. \
+      Sync untracked plugins from the remote servers to the local \
+      server. Sync uploads from the remote server to the local \
+      server.
+    DESC
+    task :local_bootstrap do
+      # This tasks is a collector for various other tasks
+      install_wp
+      sync_untracked_plugins
+      sync_uploads
     end
   end
 end
