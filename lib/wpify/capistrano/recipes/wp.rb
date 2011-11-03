@@ -18,6 +18,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
   _cset(:application) { abort "Please specify the name of your application, set :application, 'foo'" }
   _cset(:repository)  { abort "Please specify the repository that houses your application's code, set :repository, 'foo'" }
+  _cset(:deploy_to) { abort "Please specify deploy to location, set :deploy_to, '/home/deploy/app'" }
 
   # =========================================================================
   # These variables may be set in the client capfile if their default values
@@ -28,7 +29,6 @@ Capistrano::Configuration.instance(:must_exist).load do
   _cset :deploy_via, :remote_cache
   _cset :use_sudo, false
 
-  _cset(:deploy_to) { abort "Please specify deploy to location, set :deploy_to, '/home/deploy/app'" }
   _cset(:revision)  { source.head }
 
   _cset :rails_env, "production"
@@ -517,8 +517,16 @@ Capistrano::Configuration.instance(:must_exist).load do
       logger.important "Local WP version: #{wp_version}"
     end
 
-    desc "Download the same WP version that is on the server"
+    desc "Downl the wordpress version installed on the server"
     task :download_wp do
+      if(wp_version = get_version(:remote => true))
+        logger.info "Download wordpress #{wp_version}"
+        run_locally("curl -O http://wordpress.org/wordpress-#{wp_version}.tar.gz")
+      end
+    end
+
+    desc "Locally install the Wordpress version installed on the server."
+    task :install_wp do
       if(wp_version = get_version(:remote => true))
         logger.info "Downloading wordpress #{wp_version}"
         run_locally("curl -o wp.tar.gz http://wordpress.org/wordpress-#{wp_version}.tar.gz")
