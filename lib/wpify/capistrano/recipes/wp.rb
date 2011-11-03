@@ -505,6 +505,11 @@ Capistrano::Configuration.instance(:must_exist).load do
       opts[:remote] ? capture(command) : run_locally(command)
     end
 
+    # Return an array of remote plugins that are symlinks
+    def remote_linked_plugins
+      capture("find #{deploy_to}/wordpress/wp-content/plugins/ -type l").split("\n").map {|f| File.basename(f).gsub(/\s+$/, '') }
+    end
+
     desc "Display the version of Wordpress installed on the first server"
     task :remote_wp_version do
       wp_version = get_version(:remote => true)
@@ -533,6 +538,13 @@ Capistrano::Configuration.instance(:must_exist).load do
         logger.info "Extracting wordpress #{wp_version}"
         run_locally("tar zxf wp.tar.gz; rm wp.tar.gz")
       end
+    end
+
+    desc "Rsync remote plugins that aren't tracked in revision control"
+    task :sync_untracked_plugins do
+      server = find_servers(:roles => :app, :except => { :no_release => true }).first.host
+      logger.info "Syncing non-linked plugins from #{server}"
+      run_locally("rsync -avz --no-links #{user}@#{server}:#{deploy_to}/wordpress/wp-content/plugins/ #{Dir.getwd}/wordpress/wp-content/plugins/")
     end
   end
 end
