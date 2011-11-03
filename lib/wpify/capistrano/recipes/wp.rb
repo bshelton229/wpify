@@ -495,4 +495,36 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
     end
   end
+
+  # Wpify commands
+  namespace :wpify do
+    # Get Version Helper
+    def get_version(opts = {:remote => false})
+      dir = opts[:remote] ? deploy_to : Dir.getwd
+      command = "php -r 'include(\"#{dir}/wordpress/wp-includes/version.php\"); print trim(\$wp_version);'"
+      opts[:remote] ? capture(command) : run_locally(command)
+    end
+
+    desc "Display the version of Wordpress installed on the first server"
+    task :remote_wp_version do
+      wp_version = get_version(:remote => true)
+      logger.important "Remote WP version: #{wp_version}"
+    end
+
+    desc "Display the version of Wordpress installed locally"
+    task :local_wp_version do
+      wp_version = get_version
+      logger.important "Local WP version: #{wp_version}"
+    end
+
+    desc "Download the same WP version that is on the server"
+    task :download_wp do
+      if(wp_version = get_version(:remote => true))
+        logger.info "Downloading wordpress #{wp_version}"
+        run_locally("curl -o wp.tar.gz http://wordpress.org/wordpress-#{wp_version}.tar.gz")
+        logger.info "Extracting wordpress #{wp_version}"
+        run_locally("tar zxf wp.tar.gz; rm wp.tar.gz")
+      end
+    end
+  end
 end
