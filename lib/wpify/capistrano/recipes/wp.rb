@@ -526,12 +526,19 @@ Capistrano::Configuration.instance(:must_exist).load do
         logger.important "Local WP version: #{wp_version}"
       end
 
-      desc "Downl the wordpress version installed on the server"
+      desc "Download the wordpress version installed on the server"
       task :download_wp do
         if(wp_version = get_version(:remote => true))
           logger.info "Download wordpress #{wp_version}"
           run_locally("curl -O http://wordpress.org/wordpress-#{wp_version}.tar.gz")
         end
+      end
+
+      desc "Get remote uploads"
+      task :get_uploads do
+        server = find_servers(:roles => :app, :except => { :no_release => true }).first
+        logger.info "Getting uploads from #{server.host}"
+        run_locally("rsync -avz #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/uploads/ #{Dir.getwd}/wordpress/wp-content/uploads/")
       end
 
       desc "Locally install the Wordpress version installed on the server."
