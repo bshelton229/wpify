@@ -509,43 +509,63 @@ Capistrano::Configuration.instance(:must_exist).load do
       capture("find #{deploy_to}/wordpress/wp-content/plugins/ -type l").split("\n").map {|f| File.basename(f).gsub(/\s+$/, '') }
     end
 
-    desc "Display the version of Wordpress installed on the first server"
-    task :remote_wp_version do
-      wp_version = get_version(:remote => true)
-      logger.important "Remote WP version: #{wp_version}"
-    end
-
-    desc "Display the version of Wordpress installed locally"
-    task :local_wp_version do
-      wp_version = get_version
-      logger.important "Local WP version: #{wp_version}"
-    end
-
-    desc "Downl the wordpress version installed on the server"
-    task :download_wp do
-      if(wp_version = get_version(:remote => true))
-        logger.info "Download wordpress #{wp_version}"
-        run_locally("curl -O http://wordpress.org/wordpress-#{wp_version}.tar.gz")
+    # Remote tasks
+    namespace :remote do
+      desc "Display the version of Wordpress installed on the first server"
+      task :wp_version do
+        wp_version = get_version(:remote => true)
+        logger.important "Remote WP version: #{wp_version}"
       end
     end
 
-    desc "Locally install the Wordpress version installed on the server."
-    task :install_wp do
-      if(wp_version = get_version(:remote => true))
-        logger.info "Downloading wordpress #{wp_version}"
-        run_locally("curl -o wp.tar.gz http://wordpress.org/wordpress-#{wp_version}.tar.gz")
-        logger.info "Extracting wordpress #{wp_version}"
-        run_locally("tar zxf wp.tar.gz; rm wp.tar.gz")
+    # Local tasks
+    namespace :local do
+      desc "Display the version of Wordpress installed locally"
+      task :wp_version do
+        wp_version = get_version
+        logger.important "Local WP version: #{wp_version}"
+      end
+
+      desc "Downl the wordpress version installed on the server"
+      task :download_wp do
+        if(wp_version = get_version(:remote => true))
+          logger.info "Download wordpress #{wp_version}"
+          run_locally("curl -O http://wordpress.org/wordpress-#{wp_version}.tar.gz")
+        end
+      end
+
+      desc "Locally install the Wordpress version installed on the server."
+      task :install_wp do
+        if(wp_version = get_version(:remote => true))
+          logger.info "Downloading wordpress #{wp_version}"
+          run_locally("curl -o wp.tar.gz http://wordpress.org/wordpress-#{wp_version}.tar.gz")
+          logger.info "Extracting wordpress #{wp_version}"
+          run_locally("tar zxf wp.tar.gz; rm wp.tar.gz")
+        end
+      end
+
+      desc "Rsync remote plugins that aren't tracked in revision control"
+      task :sync_untracked_plugins do
+        server = find_servers(:roles => :app, :except => { :no_release => true }).first
+        logger.info "Syncing non-linked plugins from #{server.host}"
+        run_locally("rsync -avz --no-links #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/plugins/ #{Dir.getwd}/wordpress/wp-content/plugins/")
+      end
+
+      desc <<-DESC
+        Install wordpress locally based on the remote version. \
+        Sync untracked plugins from the remote servers to the local \
+        server. Sync uploads from the remote server to the local \
+        server.
+      DESC
+      task :bootstrap do
+        # This tasks is a collector for various other tasks
+        install_wp
+        sync_untracked_plugins
+        sync_uploads
       end
     end
 
-    desc "Rsync remote plugins that aren't tracked in revision control"
-    task :sync_untracked_plugins do
-      server = find_servers(:roles => :app, :except => { :no_release => true }).first
-      logger.info "Syncing non-linked plugins from #{server.host}"
-      run_locally("rsync -avz --no-links #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/plugins/ #{Dir.getwd}/wordpress/wp-content/plugins/")
-    end
-
+    # Tasks that perform local and remote operations
     desc "Pull and pushes wp-content/uploads files (2-way operation)"
     task :sync_uploads do
       servers = find_servers(:roles => :app, :except => { :no_release => true })
@@ -556,19 +576,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         logger.info "Pushing files to #{server.host}"
         run_locally("rsync -avz --update #{Dir.getwd}/wordpress/wp-content/uploads/ #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/uploads/")
       end
-    end
-
-    desc <<-DESC
-      Install wordpress locally based on the remote version. \
-      Sync untracked plugins from the remote servers to the local \
-      server. Sync uploads from the remote server to the local \
-      server.
-    DESC
-    task :local_bootstrap do
-      # This tasks is a collector for various other tasks
-      install_wp
-      sync_untracked_plugins
-      sync_uploads
     end
   end
 end
