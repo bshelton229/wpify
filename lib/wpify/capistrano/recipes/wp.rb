@@ -31,7 +31,6 @@ Capistrano::Configuration.instance(:must_exist).load do
 
   _cset(:revision)  { source.head }
 
-  _cset :rails_env, "production"
   _cset :rake, "rake"
 
   _cset :maintenance_basename, "maintenance"
