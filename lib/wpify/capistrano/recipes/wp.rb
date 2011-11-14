@@ -547,11 +547,16 @@ Capistrano::Configuration.instance(:must_exist).load do
       run_locally("rsync -avz --no-links #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/plugins/ #{Dir.getwd}/wordpress/wp-content/plugins/")
     end
 
-    desc "Pull uploads from the first remote app server"
+    desc "Pull and pushes wp-content/uploads files (2-way operation)"
     task :sync_uploads do
-      server = find_servers(:roles => :app, :except => { :no_release => true }).first
-      logger.info "Syncing uploads from #{server.host}"
-      run_locally("rsync -avz #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/uploads/ #{Dir.getwd}/wordpress/wp-content/uploads/")
+      servers = find_servers(:roles => :app, :except => { :no_release => true })
+      logger.info "Syncing uploads from #{servers.first.host}"
+      run_locally("rsync -avz --update #{user}@#{servers.first.host}:#{deploy_to}/wordpress/wp-content/uploads/ #{Dir.getwd}/wordpress/wp-content/uploads/")
+      # Push files to each remote server
+      servers.each do |server|
+        logger.info "Pushing files to #{server.host}"
+        run_locally("rsync -avz --update #{Dir.getwd}/wordpress/wp-content/uploads/ #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/uploads/")
+      end
     end
 
     desc <<-DESC
