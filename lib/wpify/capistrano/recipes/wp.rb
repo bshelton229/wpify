@@ -292,7 +292,9 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     desc "Copy content"
     task :wp_copy_content do
-      run "cp -Rf #{current_path}/wordpress/wp-content/* #{deploy_to}/wordpress/wp-content/"
+      source = "#{current_path}/wordpress/wp-content/"
+      dest = "#{deploy_to}/wordpress/wp-content/"
+      run "if [ -d #{source} ] && [ -d #{dest} ]; then cp -Rf #{source}* #{dest}; fi"
     end
 
     desc <<-DESC
