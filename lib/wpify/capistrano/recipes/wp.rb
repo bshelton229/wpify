@@ -273,7 +273,8 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       run "rm -f #{current_path} && ln -s #{latest_release} #{current_path}"
       # Link the wordpress stuff to current path
-      wp_links
+      # wp_links
+      wp_copy_content
     end
 
     desc "Link the wordpress assets into the wordpress serve folder"
@@ -287,6 +288,11 @@ Capistrano::Configuration.instance(:must_exist).load do
           fi;
         EOB
       end
+    end
+
+    desc "Copy content"
+    task :wp_copy_content do
+      run "cp -Rf #{current_path}/wordpress/wp-content/* #{deploy_to}/wordpress/wp-content/"
     end
 
     desc <<-DESC
