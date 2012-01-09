@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = Wpify::VERSION
   s.authors     = ["Bryan Shelton"]
   s.email       = ["bryan@sheltonopensolutions.com"]
-  s.homepage    = ""
+  s.homepage    = "https://github.com/bshelton229/wpify"
   s.summary     = %q{Wordpress deploy tools, including a capistrano recipe}
   s.description = %q{Wordpress deploy tools, including a capistrano recipe. This project is still in early development}
 
