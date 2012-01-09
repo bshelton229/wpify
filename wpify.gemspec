@@ -5,11 +5,11 @@ require "wpify/version"
 Gem::Specification.new do |s|
   s.name        = "wpify"
   s.version     = Wpify::VERSION
-  s.authors     = ["University Communications at UW-Madison"]
-  s.email       = ["bshelton2@wisc.edu"]
+  s.authors     = ["Bryan Shelton"]
+  s.email       = ["bryan@sheltonopensolutions.com"]
   s.homepage    = ""
   s.summary     = %q{Wordpress deploy tools, including a capistrano recipe}
-  s.description = %q{Wordpress deploy tools, including a Capistrano recipe}
+  s.description = %q{Wordpress deploy tools, including a capistrano recipe. This project is still in early development}
 
   s.rubyforge_project = "wpify"
 
