@@ -273,7 +273,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       run "rm -f #{current_path} && ln -s #{latest_release} #{current_path}"
       # Link the wordpress stuff to current path
-      # wp_links 
+      # wp_links
       wp_copy_content
     end
 
@@ -529,6 +529,17 @@ Capistrano::Configuration.instance(:must_exist).load do
         logger.important "Local WP version: #{wp_version}"
       end
 
+      desc "Download the remote wp-config.php file"
+      task :get_remote_config do
+        server = find_servers(:roles => :app, :except => { :no_release => true }).first
+        local_config_file = "#{Dir.getwd}/wordpress/wp-config.php"
+        if not File.exist? local_config_file
+          run_locally "scp #{user}@#{server.host}:#{deploy_to}/wordpress/wp-config.php #{local_config_file}"
+        else
+          logger.important "A local wp-config.php file already exists. Please remove it first."
+        end
+      end
+
       desc "Download the wordpress version installed on the server"
       task :download_wp do
         if(wp_version = get_version(:remote => true))
@@ -556,36 +567,43 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       desc "Rsync remote plugins that aren't tracked in revision control"
       task :sync_untracked_plugins do
+        get_remote_tracked = capture "ls -1A #{current_path}/wordpress/wp-content/plugins"
+        tracked = get_remote_tracked.split("\n")
+        exclude_string = String.new
+        tracked.each do |t|
+          t.strip!
+          exclude_string << " --exclude '#{t}'"
+        end
         server = find_servers(:roles => :app, :except => { :no_release => true }).first
-        logger.info "Syncing non-linked plugins from #{server.host}"
-        run_locally("rsync -avz --no-links #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/plugins/ #{Dir.getwd}/wordpress/wp-content/plugins/")
+        command = "rsync -avz#{exclude_string} #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/plugins/ #{Dir.getwd}/wordpress/wp-content/plugins/"
+        run_locally command
       end
 
       desc <<-DESC
         Install wordpress locally based on the remote version. \
-        Sync untracked plugins from the remote servers to the local \
-        server. Sync uploads from the remote server to the local \
-        server.
+        Sync untracked plugins from the remote servers to the local machine \
+        server. Sync uploads from the remote server to the local machine.
       DESC
       task :bootstrap do
         # This tasks is a collector for various other tasks
         install_wp
         sync_untracked_plugins
-        sync_uploads
+        get_uploads
+        get_remote_config
       end
     end
 
     # Tasks that perform local and remote operations
-    desc "Pull and pushes wp-content/uploads files (2-way operation)"
-    task :sync_uploads do
-      servers = find_servers(:roles => :app, :except => { :no_release => true })
-      logger.info "Syncing uploads from #{servers.first.host}"
-      run_locally("rsync -avz --update #{user}@#{servers.first.host}:#{deploy_to}/wordpress/wp-content/uploads/ #{Dir.getwd}/wordpress/wp-content/uploads/")
-      # Push files to each remote server
-      servers.each do |server|
-        logger.info "Pushing files to #{server.host}"
-        run_locally("rsync -avz --update #{Dir.getwd}/wordpress/wp-content/uploads/ #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/uploads/")
-      end
-    end
+    # desc "Pull and pushes wp-content/uploads files (2-way operation)"
+    # task :sync_uploads do
+    #   servers = find_servers(:roles => :app, :except => { :no_release => true })
+    #   logger.info "Syncing uploads from #{servers.first.host}"
+    #   run_locally("rsync -avz --update #{user}@#{servers.first.host}:#{deploy_to}/wordpress/wp-content/uploads/ #{Dir.getwd}/wordpress/wp-content/uploads/")
+    #   # Push files to each remote server
+    #   servers.each do |server|
+    #     logger.info "Pushing files to #{server.host}"
+    #     run_locally("rsync -avz --update #{Dir.getwd}/wordpress/wp-content/uploads/ #{user}@#{server.host}:#{deploy_to}/wordpress/wp-content/uploads/")
+    #   end
+    # end
   end
 end
