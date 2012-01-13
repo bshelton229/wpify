@@ -273,7 +273,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       run "rm -f #{current_path} && ln -s #{latest_release} #{current_path}"
       # Link the wordpress stuff to current path
-      # wp_links
+      # wp_links 
       wp_copy_content
     end
 
@@ -510,11 +510,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       dir = opts[:remote] ? deploy_to : Dir.getwd
       command = "php -r 'include(\"#{dir}/wordpress/wp-includes/version.php\"); print trim(\$wp_version);'"
       opts[:remote] ? capture(command) : run_locally(command)
-    end
-
-    # Return an array of remote plugins that are symlinks
-    def remote_linked_plugins
-      capture("find #{deploy_to}/wordpress/wp-content/plugins/ -type l").split("\n").map {|f| File.basename(f).gsub(/\s+$/, '') }
     end
 
     # Remote tasks
